@@ -95,11 +95,11 @@ class RenderAssetsThumbnail(bpy.types.Operator):
             'color_mode': bpy.context.scene.render.image_settings.color_mode,
             'active_camera': bpy.context.scene.camera or None
         }
-        bpy.ops.object.camera_add(enter_editmode=False, align='VIEW', location=(0, 0, 0), rotation=(0, 0, 0),
+        area = [area for area in bpy.context.screen.areas if area.type == "VIEW_3D"][0]
+        bpy.ops.object.camera_add({'area': area}, enter_editmode=False, align='VIEW', location=(0, 0, 0), rotation=(0, 0, 0),
                                   scale=(1, 1, 1))
         bpy.context.active_object.name = self._camera_name
         bpy.context.scene.camera = bpy.data.objects[self._camera_name]
-        area = [area for area in bpy.context.screen.areas if area.type == "VIEW_3D"][0]
         # Bring camera to view to capture viewport angle, needs context override
         bpy.ops.view3d.camera_to_view({'area': area})
         # Setup _temp_camera settings
@@ -125,6 +125,9 @@ class RenderAssetsThumbnail(bpy.types.Operator):
         if not bpy.data.is_saved:
             self.report({'ERROR'}, "Please save current .blend file")
             return {"CANCELLED"}
+            
+        if bpy.context.active_object.mode == 'EDIT':
+            bpy.ops.object.editmode_toggle()
 
         self.setup_directory()
         self.setup_camera()
