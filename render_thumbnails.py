@@ -17,7 +17,6 @@ class RenderAssetsThumbnail(bpy.types.Operator):
     bl_idname = "asset.render_thumbnails"
     bl_label = "Render thumbnails"
 
-    _camera_name = '_temp_camera'
     thumb_dir = ''
     visible_objects = []
     _settings = {}  # This is to revert render settings after executing
@@ -47,6 +46,11 @@ class RenderAssetsThumbnail(bpy.types.Operator):
         bpy.ops.ed.lib_id_load_custom_preview(
             {"id": asset.local_id},
             filepath=f"{location}/{asset.local_id.name}.png")
+
+    def get_area_type(self, _type: str) -> bpy.types.Area or None:
+        if not _type:
+            return None
+        return [area for area in bpy.context.screen.areas if area.type == _type][0]
 
     def render_thumbnail(self, assets: List[bpy.types.FileSelectEntry]) -> None:
         executed_objects = {}
@@ -84,25 +88,31 @@ class RenderAssetsThumbnail(bpy.types.Operator):
         self.report({'OPERATOR'}, f"Asset Catalog updated")
         bpy.ops.screen.info_log_show()
 
-    def setup_directory(self):
+    def setup_directory(self) -> None:
         self.thumb_dir = f"{os.path.dirname(bpy.data.filepath)}/thumbnails"
 
-    def setup_camera(self):
+    def delete_object(self, name: str) -> None:
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy.data.objects[name].select_set(True)
+        bpy.ops.object.delete()
+
+    def setup_camera(self) -> None:
         self._settings = {
             'resolution_x': bpy.data.scenes[0].render.resolution_x,
             'resolution_y': bpy.data.scenes[0].render.resolution_y,
             'film_transparent': bpy.context.scene.render.film_transparent,
             'color_mode': bpy.context.scene.render.image_settings.color_mode,
-            'active_camera': bpy.context.scene.camera or None
+            'cam': bpy.context.scene.camera.copy()
         }
-        area = [area for area in bpy.context.screen.areas if area.type == "VIEW_3D"][0]
-        bpy.ops.object.camera_add({'area': area}, enter_editmode=False, align='VIEW', location=(0, 0, 0), rotation=(0, 0, 0),
-                                  scale=(1, 1, 1))
-        bpy.context.active_object.name = self._camera_name
-        bpy.context.scene.camera = bpy.data.objects[self._camera_name]
+
+        area = self.get_area_type('VIEW_3D')
         # Bring camera to view to capture viewport angle, needs context override
-        bpy.ops.view3d.camera_to_view({'area': area})
-        # Setup _temp_camera settings
+        override_context = bpy.context.copy()
+        override_context['area'] = area
+        override_context['region'] = area.regions[-1]
+        with bpy.context.temp_override(**override_context):
+            bpy.ops.view3d.camera_to_view()
+        # Setup temp settings
         bpy.data.scenes[0].render.resolution_x = 200
         bpy.data.scenes[0].render.resolution_y = 200
         bpy.context.scene.render.film_transparent = True
@@ -114,19 +124,28 @@ class RenderAssetsThumbnail(bpy.types.Operator):
             bpy.data.scenes[0].render.resolution_y = self._settings['resolution_y']
             bpy.context.scene.render.film_transparent = self._settings['film_transparent']
             bpy.context.scene.render.image_settings.color_mode = self._settings['color_mode']
-            if self._settings['active_camera']:
-                bpy.context.scene.camera = self._settings['active_camera']
-        bpy.ops.object.select_all(action='DESELECT')
-        bpy.data.objects[self._camera_name].select_set(True)
-        bpy.ops.object.delete()
+            bpy.context.scene.camera.rotation_euler = self._settings['cam'].rotation_euler
+            bpy.context.scene.camera.location = self._settings['cam'].location
 
-    def execute(self, context):
-
+    def check_initial_conditions(self):
         if not bpy.data.is_saved:
             self.report({'ERROR'}, "Please save current .blend file")
-            return {"CANCELLED"}
-            
-        if bpy.context.active_object.mode == 'EDIT':
+            return 'err'
+
+        if not bpy.context.scene.camera:
+            self.report({'ERROR'}, "There is no active camera")
+            return 'err'
+
+        area = self.get_area_type('VIEW_3D')
+        if area.spaces[0].region_3d.view_perspective == 'CAMERA':
+            area.spaces[0].region_3d.view_perspective = 'PERSP'
+
+    def execute(self, context):
+        status = self.check_initial_conditions()
+        if status == 'err':
+            return {'CANCELLED'}
+
+        if bpy.context.active_object and bpy.context.active_object.mode == 'EDIT':
             bpy.ops.object.editmode_toggle()
 
         self.setup_directory()
