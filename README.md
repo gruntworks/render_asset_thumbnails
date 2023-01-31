@@ -24,3 +24,5 @@ Eevee is recommended with low sampling and HDRI setup for rendering.
 
 After it is finished rendering, all images should be in `/thumbnails/{collection_name}/`  
 Script will update asset thumbnails automatically after rendering.
+
+![Preview](./images/flow.jpg)
