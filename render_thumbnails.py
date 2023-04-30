@@ -170,11 +170,17 @@ def display_button(self, context):
 
 def register():
     bpy.utils.register_class(RenderAssetsThumbnail)
-    bpy.types.ASSETBROWSER_MT_edit.append(display_button)
+    if hasattr(bpy.types, "ASSETBROWSER_MT_edit"):
+        bpy.types.ASSETBROWSER_MT_edit.append(display_button)
+    elif hasattr(bpy.types, "ASSETBROWSER_MT_asset"):
+        bpy.types.ASSETBROWSER_MT_asset.append(display_button)
 
 
 def unregister():
-    bpy.types.ASSETBROWSER_MT_edit.remove(display_button)
+    if hasattr(bpy.types, "ASSETBROWSER_MT_edit"):
+        bpy.types.ASSETBROWSER_MT_edit.remove(display_button)
+    elif hasattr(bpy.types, "ASSETBROWSER_MT_asset"):
+        bpy.types.ASSETBROWSER_MT_asset.remove(display_button)
     bpy.utils.unregister_class(RenderAssetsThumbnail)
 
 

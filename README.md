@@ -20,7 +20,7 @@ images can be saved somewhere...
 Eevee is recommended with low sampling and HDRI setup for rendering.
 
 1. Go to Asset browser and click on assets which you would like to render.
-2. Click `Edit -> Render Thumbnails`
+2. Click `Edit or Asset(Blender 3.5) -> Render Thumbnails`
 
 After it is finished rendering, all images should be in `/thumbnails/{collection_name}/`  
 Script will update asset thumbnails automatically after rendering.
