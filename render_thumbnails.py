@@ -1,5 +1,5 @@
 import bpy
-from typing import List, Union
+from typing import List
 import os
 
 bl_info = {
@@ -44,13 +44,11 @@ class RenderAssetsThumbnail(bpy.types.Operator):
             return asset
         if isinstance(asset, bpy.types.Collection):
             collection = bpy.data.collections.get(asset.name)
-        if collection:
-            # Iterate through the objects in the collection and select them
-            collection.hide_render = False
-            for obj in collection.objects:
-                obj.select_set(True)
-                obj.hide_render = False
-            return collection
+            if collection:
+                # Iterate through the objects in the collection and select them
+                collection.hide_render = False
+                self.select_all_objects_in_collection(collection)
+                return collection
 
     def update_thumbnail(self, asset: bpy.types.FileSelectEntry, location: str) -> None:
         bpy.ops.ed.lib_id_load_custom_preview(
@@ -67,6 +65,20 @@ class RenderAssetsThumbnail(bpy.types.Operator):
             return asset.users_collection[0].name
         if type(asset) == bpy.types.Collection:
             return asset.name
+
+    def select_all_objects_in_collection(self, collection: bpy.types.Collection) -> None:
+        """
+        Recursively select all objects in the given collection and its sub-collections.
+
+        Args:
+            collection: The Blender collection to start the selection from.
+        """
+        for obj in collection.objects:
+            obj.select_set(True)
+            obj.hide_render = False
+
+        for sub_collection in collection.children:
+            self.select_all_objects_in_collection(sub_collection)
 
     def render_thumbnail(self, assets: List[bpy.types.FileSelectEntry]) -> None:
         executed_objects = {}
