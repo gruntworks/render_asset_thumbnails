@@ -46,7 +46,6 @@ class RenderAssetsThumbnail(bpy.types.Operator):
             collection = bpy.data.collections.get(asset.name)
             if collection:
                 # Iterate through the objects in the collection and select them
-                collection.hide_render = False
                 self.select_all_objects_in_collection(collection)
                 return collection
 
@@ -73,6 +72,9 @@ class RenderAssetsThumbnail(bpy.types.Operator):
         Args:
             collection: The Blender collection to start the selection from.
         """
+        if not collection:
+            return
+        collection.hide_render = False
         for obj in collection.objects:
             obj.select_set(True)
             obj.hide_render = False
